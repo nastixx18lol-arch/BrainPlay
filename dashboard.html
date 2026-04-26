@@ -1,0 +1,218 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="dashboard-container">
+    <div class="top-left-buttons">
+        <a href="/profile" class="profile-btn">👤 ЛИЧНЫЙ КАБИНЕТ</a>
+    </div>
+    
+    <div class="dashboard-header">
+        <h1 class="dashboard-title">ГЛАВНОЕ МЕНЮ</h1>
+        <div class="site-title-right">BrainPlay</div>
+    </div>
+    
+    <div class="rating-wrapper">
+        <a href="/leaderboard" class="rating-clickable">
+            <div class="rating-header">
+                <span class="rating-icon">🏆</span>
+                <h2 class="rating-title">РЕЙТИНГ</h2>
+                <span class="rating-icon">🏆</span>
+            </div>
+            <div class="rating-divider"></div>
+        </a>
+        <p class="rating-subtitle">Выбери арену для битвы</p>
+    </div>
+    
+    <div class="themes-grid">
+        {% set themes_list = [
+            {'key': 'algorithms', 'name': 'АЛГОРИТМЫ В ЖИЗНИ', 'desc': 'Как алгоритмы работают вокруг нас', 'color': 'linear-gradient(135deg, rgba(30, 60, 114, 0.85), rgba(42, 82, 152, 0.85))'},
+            {'key': 'logic', 'name': 'ЛОГИЧЕСКИЕ ЗАГАДКИ', 'desc': 'Развивай логическое мышление', 'color': 'linear-gradient(135deg, rgba(106, 48, 147, 0.85), rgba(160, 68, 255, 0.85))'},
+            {'key': 'loops', 'name': 'ПОВТОРИТЕЛИ', 'desc': 'Циклы и повторения', 'color': 'linear-gradient(135deg, rgba(19, 78, 94, 0.85), rgba(113, 178, 128, 0.85))'},
+            {'key': 'conditions', 'name': 'ВЫБОР И ВЕТВЛЕНИЕ', 'desc': 'Условия и ветвления', 'color': 'linear-gradient(135deg, rgba(240, 152, 25, 0.85), rgba(255, 81, 47, 0.85))'},
+            {'key': 'lists', 'name': 'СПИСКИ И ПОРЯДОК', 'desc': 'Массивы и структуры данных', 'color': 'linear-gradient(135deg, rgba(0, 180, 219, 0.85), rgba(0, 131, 176, 0.85))'},
+            {'key': 'storage', 'name': 'ХРАНИЛИЩА ДАННЫХ', 'desc': 'Базы данных и файлы', 'color': 'linear-gradient(135deg, rgba(195, 20, 50, 0.85), rgba(255, 78, 80, 0.85))'},
+            {'key': 'flowcharts', 'name': 'БЛОК-СХЕМЫ', 'desc': 'Визуализация алгоритмов', 'color': 'linear-gradient(135deg, rgba(236, 72, 153, 0.85), rgba(219, 39, 119, 0.85))'},
+            {'key': 'detective', 'name': 'КОМПЬЮТЕРНЫЙ ДЕТЕКТИВ', 'desc': 'Расследуй IT-преступления', 'color': 'linear-gradient(135deg, rgba(15, 32, 39, 0.85), rgba(44, 83, 100, 0.85))'},
+            {'key': 'mixed', 'name': 'СМЕШАННЫЙ БОЙ', 'desc': 'Все темы вместе', 'color': 'rainbow-gradient-full'}
+        ] %}
+        
+        {% for theme in themes_list %}
+        <div class="theme-card" data-theme="{{ theme.key }}" data-theme-name="{{ theme.name }}">
+            <div class="card-inner {% if theme.key == 'mixed' %}rainbow-gradient-full{% endif %}" style="{% if theme.key != 'mixed' %}background: {{ theme.color }};{% endif %}">
+                <h3>{{ theme.name }}</h3>
+                <div class="card-line"></div>
+                <p>{{ theme.desc }}</p>
+                <div class="stars-container">
+                    {% set stars = user.theme_progress[theme.key].stars if user.theme_progress else 0 %}
+                    {% for i in range(5) %}
+                        {% if i < stars %}
+                            <span class="star-filled">★</span>
+                        {% else %}
+                            <span class="star-empty">☆</span>
+                        {% endif %}
+                    {% endfor %}
+                    <span class="star-score">({{ stars }}/5)</span>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <div class="dashboard-footer">
+        <a href="/logout" class="back-btn">Назад</a>
+    </div>
+</div>
+
+<!-- Модальное окно выбора сложности -->
+<div class="modal-overlay" id="difficultyModal">
+    <div class="modal-content difficulty-modal">
+        <button class="modal-close" id="closeDifficultyModal">&times;</button>
+        <h2 class="modal-title" id="modalThemeTitle">Выбери сложность</h2>
+        <div class="difficulty-options">
+            <div class="difficulty-card easy" data-difficulty="easy">
+                <div class="difficulty-name">ЛЕГКИЙ</div>
+                <div class="difficulty-stars" id="easyStars">
+                    <span class="star-empty">☆</span>
+                    <span class="star-empty">☆</span>
+                    <span class="star-score">(0/2)</span>
+                </div>
+                <div class="difficulty-desc">2 задания</div>
+            </div>
+            <div class="difficulty-card medium" data-difficulty="medium">
+                <div class="difficulty-name">СРЕДНИЙ</div>
+                <div class="difficulty-stars" id="mediumStars">
+                    <span class="star-empty">☆</span>
+                    <span class="star-empty">☆</span>
+                    <span class="star-score">(0/2)</span>
+                </div>
+                <div class="difficulty-desc">2 задания</div>
+            </div>
+            <div class="difficulty-card hard" data-difficulty="hard">
+                <div class="difficulty-name">СЛОЖНЫЙ</div>
+                <div class="difficulty-stars" id="hardStars">
+                    <span class="star-empty">☆</span>
+                    <span class="star-score">(0/1)</span>
+                </div>
+                <div class="difficulty-desc">1 задание</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const difficultyModal = document.getElementById('difficultyModal');
+    const closeDifficultyBtn = document.getElementById('closeDifficultyModal');
+    let currentTheme = null;
+    let currentThemeName = null;
+    
+    function updateDifficultyStars(theme) {
+        fetch(`/get_theme_progress?theme=${theme}`)
+            .then(response => response.json())
+            .then(data => {
+                const easyStars = data.easy;
+                const easyContainer = document.getElementById('easyStars');
+                if (easyContainer) {
+                    easyContainer.innerHTML = '';
+                    for (let i = 0; i < 2; i++) {
+                        if (i < easyStars) {
+                            easyContainer.innerHTML += '<span class="star-filled">★</span>';
+                        } else {
+                            easyContainer.innerHTML += '<span class="star-empty">☆</span>';
+                        }
+                    }
+                    easyContainer.innerHTML += `<span class="star-score">(${easyStars}/2)</span>`;
+                }
+                
+                const mediumStars = data.medium;
+                const mediumContainer = document.getElementById('mediumStars');
+                if (mediumContainer) {
+                    mediumContainer.innerHTML = '';
+                    for (let i = 0; i < 2; i++) {
+                        if (i < mediumStars) {
+                            mediumContainer.innerHTML += '<span class="star-filled">★</span>';
+                        } else {
+                            mediumContainer.innerHTML += '<span class="star-empty">☆</span>';
+                        }
+                    }
+                    mediumContainer.innerHTML += `<span class="star-score">(${mediumStars}/2)</span>`;
+                }
+                
+                const hardStars = data.hard;
+                const hardContainer = document.getElementById('hardStars');
+                if (hardContainer) {
+                    hardContainer.innerHTML = '';
+                    for (let i = 0; i < 1; i++) {
+                        if (i < hardStars) {
+                            hardContainer.innerHTML += '<span class="star-filled">★</span>';
+                        } else {
+                            hardContainer.innerHTML += '<span class="star-empty">☆</span>';
+                        }
+                    }
+                    hardContainer.innerHTML += `<span class="star-score">(${hardStars}/1)</span>`;
+                }
+            })
+            .catch(error => console.error('Error fetching progress:', error));
+    }
+    
+    const themeCards = document.querySelectorAll('.theme-card');
+    
+    themeCards.forEach(card => {
+        card.addEventListener('click', function() {
+            currentTheme = this.getAttribute('data-theme');
+            currentThemeName = this.getAttribute('data-theme-name');
+            document.getElementById('modalThemeTitle').textContent = currentThemeName;
+            updateDifficultyStars(currentTheme);
+            difficultyModal.classList.add('active');
+            document.body.classList.add('modal-open');
+        });
+    });
+    
+    function closeDifficultyModal() {
+        difficultyModal.classList.remove('active');
+        document.body.classList.remove('modal-open');
+    }
+    
+    closeDifficultyBtn.onclick = closeDifficultyModal;
+    
+    difficultyModal.onclick = function(e) {
+        if (e.target === difficultyModal) {
+            closeDifficultyModal();
+        }
+    }
+    
+    const difficultyCards = document.querySelectorAll('.difficulty-card');
+    
+    difficultyCards.forEach(card => {
+        card.addEventListener('click', function() {
+            const difficulty = this.getAttribute('data-difficulty');
+            let difficultyRu = '';
+            if (difficulty === 'easy') difficultyRu = 'легкий';
+            else if (difficulty === 'medium') difficultyRu = 'средний';
+            else difficultyRu = 'сложный';
+            window.location.href = `/game?theme=${currentTheme}&difficulty=${difficultyRu}`;
+        });
+    });
+    
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && difficultyModal.classList.contains('active')) {
+            closeDifficultyModal();
+        }
+    });
+    
+    // Автоматическое открытие модального окна сразу при загрузке
+    const openModalTheme = '{{ open_modal }}';
+    if (openModalTheme) {
+        // Находим карточку темы и сразу открываем модальное окно
+        const themeCard = document.querySelector(`.theme-card[data-theme="${openModalTheme}"]`);
+        if (themeCard) {
+            // Открываем модальное окно сразу, без задержки
+            currentTheme = themeCard.getAttribute('data-theme');
+            currentThemeName = themeCard.getAttribute('data-theme-name');
+            document.getElementById('modalThemeTitle').textContent = currentThemeName;
+            updateDifficultyStars(currentTheme);
+            difficultyModal.classList.add('active');
+            document.body.classList.add('modal-open');
+        }
+    }
+</script>
+{% endblock %}

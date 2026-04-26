@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="avatar-container">
+    <div class="avatar-box">
+        <h1 class="avatar-title">ВЫБЕРИ СВОЕГО БОЙЦА</h1>
+        <div class="title-line"></div>
+        <p class="avatar-subtitle">Кто будет представлять тебя в игре?</p>
+        
+        <form action="/save_avatar" method="POST" class="avatar-form" id="avatarForm">
+            <div class="avatars-grid">
+                <!-- girl1 -->
+                <div class="avatar-option" data-avatar="girl1">
+                    <input type="radio" name="avatar" value="girl1" id="avatar_girl1">
+                    <label for="avatar_girl1" class="avatar-card">
+                        <div class="avatar-image">
+                            <img src="{{ url_for('static', filename='images/characters/girl1.png') }}" alt="Мила">
+                        </div>
+                        <div class="avatar-name">МИЛА</div>
+                        <div class="avatar-class">⭐ Скорость ⭐</div>
+                    </label>
+                </div>
+                
+                <!-- girl2 -->
+                <div class="avatar-option" data-avatar="girl2">
+                    <input type="radio" name="avatar" value="girl2" id="avatar_girl2">
+                    <label for="avatar_girl2" class="avatar-card">
+                        <div class="avatar-image">
+                            <img src="{{ url_for('static', filename='images/characters/girl2.png') }}" alt="Лина">
+                        </div>
+                        <div class="avatar-name">ЛИНА</div>
+                        <div class="avatar-class">✨ Магия ✨</div>
+                    </label>
+                </div>
+                
+                <!-- robot -->
+                <div class="avatar-option" data-avatar="robot">
+                    <input type="radio" name="avatar" value="robot" id="avatar_robot">
+                    <label for="avatar_robot" class="avatar-card">
+                        <div class="avatar-image">
+                            <img src="{{ url_for('static', filename='images/characters/robot.png') }}" alt="Механик">
+                        </div>
+                        <div class="avatar-name">МЕХАНИК</div>
+                        <div class="avatar-class">🤖 Технологии 🤖</div>
+                    </label>
+                </div>
+                
+                <!-- zombie -->
+                <div class="avatar-option" data-avatar="zombie">
+                    <input type="radio" name="avatar" value="zombie" id="avatar_zombie">
+                    <label for="avatar_zombie" class="avatar-card">
+                        <div class="avatar-image">
+                            <img src="{{ url_for('static', filename='images/characters/zombie.png') }}" alt="Мортус">
+                        </div>
+                        <div class="avatar-name">МОРТУС</div>
+                        <div class="avatar-class">🧠 Выносливость 🧠</div>
+                    </label>
+                </div>
+                
+                <!-- boy1 -->
+                <div class="avatar-option" data-avatar="boy1">
+                    <input type="radio" name="avatar" value="boy1" id="avatar_boy1">
+                    <label for="avatar_boy1" class="avatar-card">
+                        <div class="avatar-image">
+                            <img src="{{ url_for('static', filename='images/characters/boy1.png') }}" alt="Гром">
+                        </div>
+                        <div class="avatar-name">ГРОМ</div>
+                        <div class="avatar-class">⚡ Сила ⚡</div>
+                    </label>
+                </div>
+                
+                <!-- boy2 -->
+                <div class="avatar-option" data-avatar="boy2">
+                    <input type="radio" name="avatar" value="boy2" id="avatar_boy2">
+                    <label for="avatar_boy2" class="avatar-card">
+                        <div class="avatar-image">
+                            <img src="{{ url_for('static', filename='images/characters/boy2.png') }}" alt="Тень">
+                        </div>
+                        <div class="avatar-name">ТЕНЬ</div>
+                        <div class="avatar-class">🌙 Скрытность 🌙</div>
+                    </label>
+                </div>
+            </div>
+            
+            <button type="submit" class="avatar-submit-btn" id="submitBtn" disabled>ПРОДОЛЖИТЬ →</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    const avatarOptions = document.querySelectorAll('.avatar-option');
+    const submitBtn = document.getElementById('submitBtn');
+    
+    avatarOptions.forEach(option => {
+        option.addEventListener('click', function() {
+            avatarOptions.forEach(opt => opt.classList.remove('selected'));
+            this.classList.add('selected');
+            const radio = this.querySelector('input[type="radio"]');
+            radio.checked = true;
+            submitBtn.disabled = false;
+        });
+    });
+</script>
+{% endblock %}

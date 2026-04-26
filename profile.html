@@ -1,0 +1,406 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="profile-container">
+    <!-- Кнопка Назад вверху слева -->
+    <div class="top-left-buttons">
+        <a href="/dashboard" class="back-btn-small">← Назад</a>
+    </div>
+    
+    <div class="profile-header">
+        <div class="profile-title-wrapper">
+            <span class="profile-icon">👤</span>
+            <h1 class="profile-title">ЛИЧНЫЙ КАБИНЕТ</h1>
+            <span class="profile-icon">👤</span>
+        </div>
+        <div class="profile-divider"></div>
+    </div>
+    
+    <div class="profile-content">
+        <!-- Левая колонка - информация о бойце -->
+        <div class="profile-left">
+            <div class="avatar-section">
+                <div class="profile-avatar">
+                    {% if user.avatar %}
+                        <img src="{{ url_for('static', filename='images/characters/' + user.avatar + '.png') }}" alt="avatar">
+                    {% else %}
+                        🐸
+                    {% endif %}
+                </div>
+                <h2 class="profile-nickname">{{ user.nickname }}</h2>
+                <button class="edit-profile-btn" id="openEditModal">✏️ РЕДАКТИРОВАТЬ</button>
+            </div>
+            
+            <div class="fighter-info">
+                <div class="info-row">
+                    <span class="info-label">⚔️ БОЕЦ:</span>
+                    <span class="info-value">
+                        {% if user.avatar == 'girl1' %}МИЛА
+                        {% elif user.avatar == 'girl2' %}ЛИНА
+                        {% elif user.avatar == 'robot' %}МЕХАНИК
+                        {% elif user.avatar == 'zombie' %}МОРТУС
+                        {% elif user.avatar == 'boy1' %}ГРОМ
+                        {% elif user.avatar == 'boy2' %}ТЕНЬ
+                        {% else %}Новичок{% endif %}
+                    </span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">✨ СПОСОБНОСТЬ:</span>
+                    <span class="info-value">
+                        {% if user.avatar == 'girl1' %}Молниеносная скорость
+                        {% elif user.avatar == 'girl2' %}Древняя магия
+                        {% elif user.avatar == 'robot' %}Кибер-усиление
+                        {% elif user.avatar == 'zombie' %}Бессмертие
+                        {% elif user.avatar == 'boy1' %}Невероятная сила
+                        {% elif user.avatar == 'boy2' %}Скрытность
+                        {% else %}Упорство{% endif %}
+                    </span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">📚 КЛАСС:</span>
+                    <span class="info-value">{{ user.grade }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">📅 ИГРОК С:</span>
+                    <span class="info-value">{{ user.created_at or 'Недавно' }}</span>
+                </div>
+            </div>
+            
+            <!-- Блок званий -->
+            <div class="rank-section">
+                <div class="rank-header">
+                    <span class="rank-icon">🏅</span>
+                    <span class="rank-title">ТВОЕ ЗВАНИЕ</span>
+                    <span class="rank-icon">🏅</span>
+                </div>
+                <div class="current-rank">
+                    {% set score = user.score %}
+                    {% if score < 100 %}
+                        {% set rank_name = 'Алгоритм-Новичок' %}
+                        {% set next_rank = 'Логик-Ученик' %}
+                        {% set next_threshold = 100 %}
+                        {% set rank_color = '#4CAF50' %}
+                    {% elif score < 250 %}
+                        {% set rank_name = 'Логик-Ученик' %}
+                        {% set next_rank = 'Мастер Алгоритмов' %}
+                        {% set next_threshold = 250 %}
+                        {% set rank_color = '#2196F3' %}
+                    {% elif score < 500 %}
+                        {% set rank_name = 'Мастер Алгоритмов' %}
+                        {% set next_rank = 'Кибер-Воин' %}
+                        {% set next_threshold = 500 %}
+                        {% set rank_color = '#9C27B0' %}
+                    {% elif score < 800 %}
+                        {% set rank_name = 'Кибер-Воин' %}
+                        {% set next_rank = 'Гроссмейстер Кода' %}
+                        {% set next_threshold = 800 %}
+                        {% set rank_color = '#FF9800' %}
+                    {% else %}
+                        {% set rank_name = 'Гроссмейстер Кода' %}
+                        {% set next_rank = none %}
+                        {% set next_threshold = none %}
+                        {% set rank_color = '#FFD700' %}
+                    {% endif %}
+                    
+                    <div class="rank-name" style="color: {{ rank_color }};">{{ rank_name }}</div>
+                    <div class="rank-points">⚡ {{ score }} баллов</div>
+                </div>
+                
+                {% if next_rank %}
+                <div class="rank-progress">
+                    <div class="progress-label">
+                        <span>До звания "{{ next_rank }}"</span>
+                        <span>{{ next_threshold - score }} баллов</span>
+                    </div>
+                    <div class="rank-progress-bar-container">
+                        {% set progress = (score / next_threshold * 100) %}
+                        <div class="rank-progress-bar" style="width: {{ progress }}%; background: {{ rank_color }};"></div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="rank-max">
+                    <span>🏆 ВЫСШЕЕ ЗВАНИЕ ДОСТИГНУТО! 🏆</span>
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- Блок настроек (только подсказки и правила) -->
+            <div class="settings-section">
+                <div class="settings-header">
+                    <span class="settings-icon">⚙️</span>
+                    <span class="settings-title">НАСТРОЙКИ</span>
+                    <span class="settings-icon">⚙️</span>
+                </div>
+                
+                <div class="settings-list">
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <span class="setting-icon">💡</span>
+                            <span class="setting-name">Подсказки</span>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="hintsToggle" {% if user.settings and user.settings.hints %}checked{% endif %}>
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                    
+                    <div class="setting-item rules-link">
+                        <div class="setting-info">
+                            <span class="setting-icon">📖</span>
+                            <span class="setting-name">Правила игры</span>
+                        </div>
+                        <button class="rules-link-btn" id="openRulesFromProfile">Смотреть →</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Правая колонка -->
+        <div class="profile-right">
+            <!-- Статистика -->
+            <div class="stats-section">
+                <h3 class="section-title">📊 СТАТИСТИКА</h3>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">⚡</div>
+                        <div class="stat-number">{{ user.score }}</div>
+                        <div class="stat-label">Всего баллов</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">🏆</div>
+                        <div class="stat-number">{{ user.rank }}</div>
+                        <div class="stat-label">Место в рейтинге</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">✅</div>
+                        <div class="stat-number">{{ user.completed_tasks or 0 }}</div>
+                        <div class="stat-label">Выполнено заданий</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Блок лучшей серии -->
+            <div class="streak-section">
+                <div class="streak-card">
+                    <div class="streak-icon">🔥</div>
+                    <div class="streak-info">
+                        <div class="streak-label">ЛУЧШАЯ СЕРИЯ</div>
+                        <div class="streak-number">{{ user.best_streak or 0 }}</div>
+                        <div class="streak-description">правильных ответов подряд</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Прогресс по темам -->
+            <div class="progress-section">
+                <h3 class="section-title">📈 ПРОГРЕСС ПО ТЕМАМ</h3>
+                <p class="progress-motivation">Пройди все темы - стань мастером! 🎯</p>
+                <div class="themes-progress">
+                    {% set themes = [
+                        {'id': 'algorithms', 'name': 'Алгоритмы в жизни'},
+                        {'id': 'logic', 'name': 'Логические загадки'},
+                        {'id': 'loops', 'name': 'Повторители'},
+                        {'id': 'conditions', 'name': 'Выбор и ветвление'},
+                        {'id': 'lists', 'name': 'Списки и порядок'},
+                        {'id': 'storage', 'name': 'Хранилища данных'},
+                        {'id': 'flowcharts', 'name': 'Блок-схемы'},
+                        {'id': 'detective', 'name': 'Компьютерный детектив'},
+                        {'id': 'mixed', 'name': 'Смешанный бой'}
+                    ] %}
+                    
+                    {% for theme in themes %}
+                    <div class="theme-progress-item">
+                        <div class="theme-info">
+                            <div class="theme-name">{{ theme.name }}</div>
+                            <div class="theme-stars">
+                                {% set stars = user.theme_progress[theme.id].stars if user.theme_progress else 0 %}
+                                {% for i in range(5) %}
+                                    {% if i < stars %}
+                                        <span class="star-filled">★</span>
+                                    {% else %}
+                                        <span class="star-empty">☆</span>
+                                    {% endif %}
+                                {% endfor %}
+                                <span class="star-score">({{ stars }}/5)</span>
+                            </div>
+                        </div>
+                        <div class="theme-actions">
+                            {% set status = user.theme_progress[theme.id].status if user.theme_progress else 'start' %}
+                            {% if status == 'completed' %}
+                                <button class="theme-btn completed" disabled>✅ ЗАВЕРШЕНО</button>
+                            {% elif status == 'in_progress' %}
+                                <a href="/game?theme={{ theme.id }}" class="theme-btn continue">▶ ПРОДОЛЖИТЬ</a>
+                            {% else %}
+                                <a href="/game?theme={{ theme.id }}" class="theme-btn start">🎮 НАЧАТЬ</a>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно редактирования -->
+<div class="modal-overlay" id="editModal">
+    <div class="modal-content">
+        <button class="modal-close" id="closeEditModal">&times;</button>
+        <h2 class="modal-title">✏️ РЕДАКТИРОВАНИЕ</h2>
+        
+        <form action="/update_profile" method="POST" class="edit-form">
+            <div class="edit-field">
+                <label>👤 Имя</label>
+                <input type="text" name="nickname" value="{{ user.nickname }}" required>
+            </div>
+            
+            <div class="edit-field">
+                <label>📚 Класс</label>
+                <input type="text" name="grade" value="{{ user.grade }}" required>
+            </div>
+            
+            <div class="edit-field">
+                <label>🔐 Новый пароль</label>
+                <input type="password" name="password" placeholder="Оставь пустым, если не хочешь менять">
+                <small class="password-hint">Минимум 4 символа</small>
+            </div>
+            
+            <div class="edit-field">
+                <label>⚔️ Сменить бойца</label>
+                <div class="avatars-select">
+                    <div class="avatar-option-select {% if user.avatar == 'girl1' %}selected{% endif %}" data-avatar="girl1">
+                        <img src="{{ url_for('static', filename='images/characters/girl1.png') }}" alt="МИЛА">
+                        <span>МИЛА</span>
+                    </div>
+                    <div class="avatar-option-select {% if user.avatar == 'girl2' %}selected{% endif %}" data-avatar="girl2">
+                        <img src="{{ url_for('static', filename='images/characters/girl2.png') }}" alt="ЛИНА">
+                        <span>ЛИНА</span>
+                    </div>
+                    <div class="avatar-option-select {% if user.avatar == 'robot' %}selected{% endif %}" data-avatar="robot">
+                        <img src="{{ url_for('static', filename='images/characters/robot.png') }}" alt="МЕХАНИК">
+                        <span>МЕХАНИК</span>
+                    </div>
+                    <div class="avatar-option-select {% if user.avatar == 'zombie' %}selected{% endif %}" data-avatar="zombie">
+                        <img src="{{ url_for('static', filename='images/characters/zombie.png') }}" alt="МОРТУС">
+                        <span>МОРТУС</span>
+                    </div>
+                    <div class="avatar-option-select {% if user.avatar == 'boy1' %}selected{% endif %}" data-avatar="boy1">
+                        <img src="{{ url_for('static', filename='images/characters/boy1.png') }}" alt="ГРОМ">
+                        <span>ГРОМ</span>
+                    </div>
+                    <div class="avatar-option-select {% if user.avatar == 'boy2' %}selected{% endif %}" data-avatar="boy2">
+                        <img src="{{ url_for('static', filename='images/characters/boy2.png') }}" alt="ТЕНЬ">
+                        <span>ТЕНЬ</span>
+                    </div>
+                </div>
+                <input type="hidden" name="avatar" id="selectedAvatar" value="{{ user.avatar }}">
+            </div>
+            
+            <button type="submit" class="save-btn">💾 СОХРАНИТЬ</button>
+        </form>
+    </div>
+</div>
+
+<!-- Модальное окно с правилами -->
+<div class="modal-overlay" id="rulesModal">
+    <div class="modal-content">
+        <button class="modal-close" id="closeRulesBtn">&times;</button>
+        <h2 class="modal-title">ПРАВИЛА ИГРЫ</h2>
+        <ul class="rules-list">
+            <li>1. Выбираешь тему и сложность задания.</li>
+            <li>2. Получаешь задание.</li>
+            <li>3. Выбираешь ответ из вариантов или вписываешь свой.</li>
+            <li>4. Получай баллы за каждый правильный ответ.</li>
+            <li>5. Чем больше баллов — тем выше место в рейтинге.</li>
+        </ul>
+        <div class="modal-footer">
+            <p class="modal-message">Все просто. Удачи! 🚀</p>
+            <button class="modal-close-btn" id="closeModalBtn">Закрыть</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Модальное окно редактирования
+    const editModal = document.getElementById('editModal');
+    const openEditBtn = document.getElementById('openEditModal');
+    const closeEditBtn = document.getElementById('closeEditModal');
+    
+    if (openEditBtn) {
+        openEditBtn.onclick = function() {
+            editModal.classList.add('active');
+            document.body.classList.add('modal-open');
+        }
+    }
+    
+    function closeEditModal() {
+        if (editModal) editModal.classList.remove('active');
+        document.body.classList.remove('modal-open');
+    }
+    
+    if (closeEditBtn) closeEditBtn.onclick = closeEditModal;
+    if (editModal) {
+        editModal.onclick = function(e) {
+            if (e.target === editModal) closeEditModal();
+        }
+    }
+    
+    // Модальное окно правил
+    const rulesModal = document.getElementById('rulesModal');
+    const openRulesBtn = document.getElementById('openRulesFromProfile');
+    const closeRulesBtn = document.getElementById('closeRulesBtn');
+    const closeModalBtn = document.getElementById('closeModalBtn');
+    
+    function openRulesModal() {
+        if (rulesModal) rulesModal.classList.add('active');
+        document.body.classList.add('modal-open');
+    }
+    
+    function closeRulesModal() {
+        if (rulesModal) rulesModal.classList.remove('active');
+        document.body.classList.remove('modal-open');
+    }
+    
+    if (openRulesBtn) openRulesBtn.onclick = openRulesModal;
+    if (closeRulesBtn) closeRulesBtn.onclick = closeRulesModal;
+    if (closeModalBtn) closeModalBtn.onclick = closeRulesModal;
+    if (rulesModal) {
+        rulesModal.onclick = function(e) {
+            if (e.target === rulesModal) closeRulesModal();
+        }
+    }
+    
+    // Выбор аватара в модальном окне
+    const avatarOptions = document.querySelectorAll('.avatar-option-select');
+    const hiddenAvatar = document.getElementById('selectedAvatar');
+    
+    avatarOptions.forEach(option => {
+        option.addEventListener('click', function() {
+            avatarOptions.forEach(opt => opt.classList.remove('selected'));
+            this.classList.add('selected');
+            const avatarValue = this.getAttribute('data-avatar');
+            if (hiddenAvatar) hiddenAvatar.value = avatarValue;
+        });
+    });
+    
+    // Настройка подсказок
+    const hintsToggle = document.getElementById('hintsToggle');
+    if (hintsToggle) {
+        hintsToggle.addEventListener('change', function() {
+            fetch('/save_settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ hints: this.checked })
+            });
+        });
+    }
+    
+    // Закрытие модалок по ESC
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            if (editModal && editModal.classList.contains('active')) closeEditModal();
+            if (rulesModal && rulesModal.classList.contains('active')) closeRulesModal();
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="register-container">
+    <div class="register-box">
+        <h1 class="title">ВХОД В АККАУНТ</h1>
+        <div class="title-line"></div>
+        
+        <div class="form-section">
+            <form action="/login" method="POST" class="register-form">
+                <input type="text" name="nickname" placeholder="Никнейм" required>
+                <input type="password" name="password" placeholder="Пароль" required>
+                <button type="submit">ВОЙТИ</button>
+            </form>
+        </div>
+        
+        <div class="login-footer">
+            <p>Нет аккаунта? <a href="/" class="register-link">Зарегистрируйся</a></p>
+        </div>
+        
+        <button type="button" class="rules-btn" id="showRulesBtn">Как играть?</button>
+    </div>
+</div>
+
+<!-- Модальное окно с правилами -->
+<div class="modal-overlay" id="rulesModal">
+    <div class="modal-content">
+        <button class="modal-close" id="closeRulesBtn">&times;</button>
+        <h2 class="modal-title">ПРАВИЛА ИГРЫ</h2>
+        <ul class="rules-list">
+            <li>1. Выбираешь тему и сложность задания.</li>
+            <li>2. Получаешь задание.</li>
+            <li>3. Выбираешь ответ из вариантов или вписываешь свой.</li>
+            <li>4. Получай баллы за каждый правильный ответ.</li>
+            <li>5. Чем больше баллов — тем выше место в рейтинге.</li>
+        </ul>
+        <div class="modal-footer">
+            <p class="modal-message">Все просто. Удачи! 🚀</p>
+            <button class="modal-close-btn" id="closeModalBtn">Закрыть</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const modal = document.getElementById('rulesModal');
+    const showBtn = document.getElementById('showRulesBtn');
+    const closeBtn = document.getElementById('closeRulesBtn');
+    const closeModalBtn = document.getElementById('closeModalBtn');
+    
+    function openModal() {
+        if (modal) modal.classList.add('active');
+        if (document.body) document.body.classList.add('modal-open');
+    }
+    
+    function closeModal() {
+        if (modal) modal.classList.remove('active');
+        if (document.body) document.body.classList.remove('modal-open');
+    }
+    
+    if (showBtn) showBtn.onclick = openModal;
+    if (closeBtn) closeBtn.onclick = closeModal;
+    if (closeModalBtn) closeModalBtn.onclick = closeModal;
+    
+    if (modal) {
+        modal.onclick = function(e) {
+            if (e.target === modal) {
+                closeModal();
+            }
+        }
+    }
+    
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && modal && modal.classList.contains('active')) {
+            closeModal();
+        }
+    });
+</script>
+{% endblock %}

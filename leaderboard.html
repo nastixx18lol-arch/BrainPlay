@@ -1,0 +1,211 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="leaderboard-container">
+    <!-- Кнопка Назад вверху слева -->
+    <div class="top-left-buttons">
+        <a href="/dashboard" class="back-btn-small">← Назад</a>
+    </div>
+    
+    <div class="leaderboard-header">
+        <div class="leaderboard-title-wrapper">
+            <span class="trophy-icon">🏆</span>
+            <h1 class="leaderboard-title">ТАБЛИЦА ЛИДЕРОВ</h1>
+            <span class="trophy-icon">🏆</span>
+        </div>
+        <div class="leaderboard-divider"></div>
+        <p class="leaderboard-subtitle">Прокачай свой рейтинг!</p>
+    </div>
+    
+    <!-- Кнопки переключения -->
+    <div class="leaderboard-tabs">
+        <button class="tab-btn active" id="globalTab">ОБЩИЙ РЕЙТИНГ</button>
+        <button class="tab-btn" id="classTab">МОЙ КЛАСС</button>
+    </div>
+    
+    <!-- Таблица общего рейтинга -->
+    <div class="leaderboard-table-container" id="globalTable">
+        <table class="leaderboard-table">
+            <thead>
+                <tr>
+                    <th>Место</th>
+                    <th>Игрок</th>
+                    <th>Класс</th>
+                    <th>Звание</th>
+                    <th>Баллы</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                <tr class="{% if user.id == current_user_id %}current-user{% endif %} {% if loop.index <= 3 %}top-three{% endif %}">
+                    <td class="rank-cell">
+                        {% if loop.index == 1 %}🥇
+                        {% elif loop.index == 2 %}🥈
+                        {% elif loop.index == 3 %}🥉
+                        {% else %}{{ loop.index }}{% endif %}
+                    </td>
+                    <td class="player-cell">
+                        <div class="player-info">
+                            <div class="player-avatar">
+                                {% if user.avatar %}
+                                    <img src="{{ url_for('static', filename='images/characters/' + user.avatar + '.png') }}" alt="avatar">
+                                {% else %}
+                                    🐸
+                                {% endif %}
+                            </div>
+                            <span class="player-name">{{ user.nickname }}</span>
+                            {% if user.id == current_user_id %}
+                                <span class="crown-icon">👑</span>
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td class="class-cell">{{ user.grade }}</td>
+                    <td class="rank-name-cell">
+                        {% set score = user.score %}
+                        {% if score < 100 %}
+                            <span class="rank-badge novice">Алгоритм-Новичок</span>
+                        {% elif score < 250 %}
+                            <span class="rank-badge learner">Логик-Ученик</span>
+                        {% elif score < 500 %}
+                            <span class="rank-badge master">Мастер Алгоритмов</span>
+                        {% elif score < 800 %}
+                            <span class="rank-badge warrior">Кибер-Воин</span>
+                        {% else %}
+                            <span class="rank-badge grandmaster">Гроссмейстер Кода</span>
+                        {% endif %}
+                    </td>
+                    <td class="score-cell">{{ user.score }} ⚡</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- Таблица по классу (скрыта по умолчанию) -->
+    <div class="leaderboard-table-container hidden" id="classTable">
+        <table class="leaderboard-table">
+            <thead>
+                <tr>
+                    <th>Место</th>
+                    <th>Игрок</th>
+                    <th>Класс</th>
+                    <th>Звание</th>
+                    <th>Баллы</th>
+                </tr>
+            </thead>
+            <tbody id="classTableBody">
+                <!-- Заполняется JavaScript -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    // Данные из Python (все пользователи)
+    const allUsers = {{ users | tojson }};
+    const currentUser = {{ current_user | tojson }};
+    
+    // Функция для получения звания по баллам
+    function getRankName(score) {
+        if (score < 100) return 'Алгоритм-Новичок';
+        if (score < 250) return 'Логик-Ученик';
+        if (score < 500) return 'Мастер Алгоритмов';
+        if (score < 800) return 'Кибер-Воин';
+        return 'Гроссмейстер Кода';
+    }
+    
+    // Функция для получения класса звания
+    function getRankClass(score) {
+        if (score < 100) return 'novice';
+        if (score < 250) return 'learner';
+        if (score < 500) return 'master';
+        if (score < 800) return 'warrior';
+        return 'grandmaster';
+    }
+    
+    // Функция для фильтрации по классу
+    function filterByClass(className) {
+        return allUsers.filter(user => user.grade === className);
+    }
+    
+    // Функция для отображения таблицы по классу
+    function updateClassTable() {
+        const classUsers = filterByClass(currentUser.grade);
+        // Сортируем по баллам
+        classUsers.sort((a, b) => (b.score || 0) - (a.score || 0));
+        
+        const tbody = document.getElementById('classTableBody');
+        tbody.innerHTML = '';
+        
+        classUsers.forEach((user, index) => {
+            const row = document.createElement('tr');
+            const rank = index + 1;
+            
+            if (user.id === currentUser.id) {
+                row.classList.add('current-user');
+            }
+            if (rank <= 3) {
+                row.classList.add('top-three');
+            }
+            
+            let rankHtml = '';
+            if (rank === 1) rankHtml = '🥇';
+            else if (rank === 2) rankHtml = '🥈';
+            else if (rank === 3) rankHtml = '🥉';
+            else rankHtml = rank;
+            
+            // Добавляем корону для текущего игрока
+            const crownHtml = user.id === currentUser.id ? '<span class="crown-icon">👑</span>' : '';
+            
+            // Получаем звание
+            const rankName = getRankName(user.score || 0);
+            const rankClass = getRankClass(user.score || 0);
+            
+            row.innerHTML = `
+                <td class="rank-cell">${rankHtml}</td>
+                <td class="player-cell">
+                    <div class="player-info">
+                        <div class="player-avatar">
+                            ${user.avatar ? `<img src="/static/images/characters/${user.avatar}.png" alt="avatar">` : '🐸'}
+                        </div>
+                        <span class="player-name">${user.nickname}</span>
+                        ${crownHtml}
+                    </div>
+                </td>
+                <td class="class-cell">${user.grade}</td>
+                <td class="rank-name-cell">
+                    <span class="rank-badge ${rankClass}">${rankName}</span>
+                </td>
+                <td class="score-cell">${user.score || 0} ⚡</td>
+            `;
+            tbody.appendChild(row);
+        });
+    }
+    
+    // Переключение между таблицами
+    const globalTab = document.getElementById('globalTab');
+    const classTab = document.getElementById('classTab');
+    const globalTable = document.getElementById('globalTable');
+    const classTable = document.getElementById('classTable');
+    
+    globalTab.addEventListener('click', () => {
+        globalTab.classList.add('active');
+        classTab.classList.remove('active');
+        globalTable.classList.remove('hidden');
+        classTable.classList.add('hidden');
+    });
+    
+    classTab.addEventListener('click', () => {
+        classTab.classList.add('active');
+        globalTab.classList.remove('active');
+        globalTable.classList.add('hidden');
+        classTable.classList.remove('hidden');
+        updateClassTable();
+    });
+    
+    // Если пользователь залогинен, сразу готовим таблицу по классу
+    {% if current_user %}
+    updateClassTable();
+    {% endif %}
+</script>
+{% endblock %}

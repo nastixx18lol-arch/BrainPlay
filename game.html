@@ -1,0 +1,257 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="game-container">
+    <div class="game-card">
+        <div class="game-header">
+            <div class="topic-badge">
+                <span class="topic-icon">📚</span>
+                <span class="topic-text">{{ theme }}</span>
+            </div>
+            <div class="difficulty-badge difficulty-{{ difficulty|lower }}">
+                <span class="difficulty-icon">
+                    {% if difficulty == 'легкий' %}⭐
+                    {% elif difficulty == 'средний' %}⭐⭐
+                    {% else %}⭐⭐⭐{% endif %}
+                </span>
+                <span>{{ difficulty }}</span>
+            </div>
+        </div>
+        
+        <div class="question-area">
+            <div class="question-header">
+                <div class="question-icon">🤔</div>
+                {% if question.hint and user and user.settings and user.settings.hints %}
+                    <button class="hint-button" id="hintButton">
+                        <span class="hint-lamp">💡</span>
+                    </button>
+                {% endif %}
+            </div>
+            <h3 class="question-text">{{ question.question }}</h3>
+            {% if question.hint and user and user.settings and user.settings.hints %}
+                <div class="hint-box hidden" id="hintBox">
+                    <span class="hint-icon">💡</span>
+                    <span class="hint-text">{{ question.hint }}</span>
+                </div>
+            {% endif %}
+        </div>
+        
+        <form id="gameForm" action="/check_answer_ajax" method="POST">
+            <input type="hidden" name="correct_answer" value='{{ question.answer | tojson }}'>
+            <input type="hidden" name="theme" value="{{ theme }}">
+            <input type="hidden" name="difficulty" value="{{ difficulty }}">
+            <input type="hidden" name="question_id" value="{{ question.id }}">
+            
+            {% if question.type == 'input' %}
+                <div class="input-area">
+                    <input type="text" name="answer" id="textAnswer" placeholder="Введи ответ..." class="answer-input" autocomplete="off">
+                    <button type="submit" class="submit-btn">📝 ОТВЕТИТЬ</button>
+                </div>
+            {% elif question.multiple %}
+                <div class="options-grid multiple" id="checkboxGroup">
+                    {% for option in question.options %}
+                        <label class="checkbox-option">
+                            <input type="checkbox" name="answer" value="{{ option }}">
+                            <span>{{ option }}</span>
+                        </label>
+                    {% endfor %}
+                </div>
+                <button type="submit" class="submit-btn">✅ ОТВЕТИТЬ</button>
+            {% else %}
+                <div class="options-grid">
+                    {% for option in question.options %}
+                        <button type="submit" name="answer" value="{{ option }}" class="option-btn">
+                            {{ option }}
+                        </button>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </form>
+        
+        <div class="game-footer">
+            <div class="progress-text">Вопрос {{ current_index }} из {{ total }}</div>
+            <a href="/dashboard" class="back-link">🏠 Вернуться в меню</a>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно -->
+<div id="resultModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); z-index: 1000; align-items: center; justify-content: center;">
+    <div style="background: linear-gradient(135deg, #1a1a2e, #16213e); border: 4px solid #3b82f6; border-radius: 20px; padding: 40px; text-align: center; width: 500px; height: 500px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 0 30px rgba(59, 130, 246, 0.5); animation: modalGlow 2s ease infinite;">
+        <img id="resultCharacter" src="{{ url_for('static', filename='images/characters/' + user.avatar + '.png') }}" style="width: 220px; height: 220px; object-fit: contain; margin-bottom: 20px;">
+        <h2 id="resultTitle" style="color: #3b82f6; margin-bottom: 20px; font-size: 48px; text-shadow: 0 0 15px rgba(59, 130, 246, 0.8); letter-spacing: 2px;">ПРАВИЛЬНО!</h2>
+        <p id="resultMessage" style="color: white; font-size: 36px; font-weight: bold;">+10 ⚡</p>
+        <button id="resultCloseBtn" style="background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; border: none; padding: 15px 40px; border-radius: 40px; font-size: 20px; font-weight: bold; cursor: pointer; margin-top: 30px;">ПРОДОЛЖИТЬ →</button>
+    </div>
+</div>
+
+<script>
+    const hintButton = document.getElementById('hintButton');
+    const hintBox = document.getElementById('hintBox');
+    if (hintButton && hintBox) {
+        hintButton.addEventListener('click', function() {
+            hintBox.classList.toggle('hidden');
+        });
+    }
+    
+    const modal = document.getElementById('resultModal');
+    const resultCharacter = document.getElementById('resultCharacter');
+    const resultTitle = document.getElementById('resultTitle');
+    const resultMessage = document.getElementById('resultMessage');
+    const closeBtn = document.getElementById('resultCloseBtn');
+    
+    const userAvatar = '{{ user.avatar }}';
+    const basePath = "{{ url_for('static', filename='images/characters/') }}";
+    let nextUrl = '';
+    let animationInterval = null;
+    
+    function playHappyAnimation() {
+        if (animationInterval) clearInterval(animationInterval);
+        let frame = 1;
+        animationInterval = setInterval(function() {
+            resultCharacter.src = basePath + userAvatar + '_happy_' + frame + '.png';
+            frame++;
+            if (frame > 2) frame = 1;
+        }, 300);
+    }
+    
+    function playSadAnimation() {
+        if (animationInterval) clearInterval(animationInterval);
+        let frame = 1;
+        animationInterval = setInterval(function() {
+            resultCharacter.src = basePath + userAvatar + '_sad_' + frame + '.png';
+            frame++;
+            if (frame > 2) frame = 1;
+        }, 300);
+    }
+    
+    function stopAnimation() {
+        if (animationInterval) clearInterval(animationInterval);
+    }
+    
+    function showResult(isCorrect, points, message, url) {
+        if (isCorrect) {
+            playHappyAnimation();
+            resultTitle.textContent = 'ПРАВИЛЬНО!';
+            resultTitle.style.color = '#3b82f6';
+            resultMessage.textContent = '+10 ⚡';
+        } else {
+            playSadAnimation();
+            resultTitle.textContent = 'НЕПРАВИЛЬНО!';
+            resultTitle.style.color = '#ef4444';
+            resultMessage.textContent = '-5 ⚡';
+        }
+        nextUrl = url;
+        modal.style.display = 'flex';
+    }
+    
+    closeBtn.onclick = function() {
+        stopAnimation();
+        modal.style.display = 'none';
+        window.location.href = nextUrl;
+    };
+    
+    const form = document.getElementById('gameForm');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            let formData = new FormData();
+            
+            // Добавляем скрытые поля
+            formData.append('correct_answer', document.querySelector('input[name="correct_answer"]').value);
+            formData.append('theme', document.querySelector('input[name="theme"]').value);
+            formData.append('difficulty', document.querySelector('input[name="difficulty"]').value);
+            formData.append('question_id', document.querySelector('input[name="question_id"]').value);
+            
+            // Проверяем тип вопроса
+            const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+            const textInput = document.querySelector('input[type="text"][name="answer"]');
+            const radioButtons = document.querySelectorAll('button.option-btn');
+            
+            if (checkboxes.length > 0) {
+                // Множественный выбор: собираем все выбранные
+                let selectedValues = [];
+                checkboxes.forEach(cb => {
+                    if (cb.checked) {
+                        selectedValues.push(cb.value);
+                    }
+                });
+                formData.append('answer', JSON.stringify(selectedValues));
+            } else if (textInput) {
+                // Текстовый ввод
+                formData.append('answer', textInput.value);
+            } else {
+                // Одиночный выбор (кнопки)
+                // В FormData уже добавится через submit
+                const submitter = e.submitter;
+                if (submitter && submitter.value) {
+                    formData.append('answer', submitter.value);
+                }
+            }
+            
+            // Если есть submitter с value (для кнопок)
+            if (e.submitter && e.submitter.value && !checkboxes.length && !textInput) {
+                formData.append('answer', e.submitter.value);
+            }
+            
+            fetch('/check_answer_ajax', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                showResult(data.is_correct, data.points, data.message, data.next_url);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                form.submit();
+            });
+        });
+    }
+</script>
+
+<style>
+    @keyframes modalGlow {
+        0% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.4); border-color: #3b82f6; }
+        50% { box-shadow: 0 0 50px rgba(59, 130, 246, 0.9); border-color: #60a5fa; }
+        100% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.4); border-color: #3b82f6; }
+    }
+    
+    .game-container { display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 40px; }
+    .game-card { width: 700px; background: rgba(0,0,0,0.6); border: 2px solid white; border-radius: 32px; padding: 40px; backdrop-filter: blur(10px); }
+    .game-header { display: flex; justify-content: space-between; margin-bottom: 30px; }
+    .topic-badge { background: rgba(255,255,255,0.2); padding: 8px 20px; border-radius: 40px; color: white; }
+    .difficulty-badge { padding: 8px 20px; border-radius: 40px; color: white; }
+    .difficulty-легкий { background: green; }
+    .difficulty-средний { background: blue; }
+    .difficulty-сложный { background: red; }
+    .question-area { text-align: center; margin: 30px 0; position: relative; }
+    .question-header { position: relative; }
+    .question-icon { font-size: 48px; }
+    .hint-button { position: absolute; right: 0; top: 0; background: none; border: none; font-size: 28px; cursor: pointer; }
+    .question-text { font-size: 24px; color: white; margin-top: 15px; }
+    .hint-box { margin-top: 15px; padding: 10px; background: rgba(255,215,0,0.15); border-left: 3px solid gold; text-align: left; color: gold; }
+    .hint-box.hidden { display: none; }
+    .options-grid { display: flex; flex-direction: column; gap: 12px; margin-top: 20px; }
+    .options-grid.multiple { margin-bottom: 20px; }
+    .option-btn { padding: 14px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); border-radius: 40px; font-size: 16px; color: white; cursor: pointer; text-align: left; padding-left: 20px; }
+    .option-btn:hover { background: rgba(255,255,255,0.3); }
+    
+    .checkbox-option { display: flex; align-items: center; gap: 12px; padding: 12px 15px; background: rgba(255,255,255,0.1); border-radius: 12px; margin: 5px 0; cursor: pointer; transition: background 0.2s; }
+    .checkbox-option:hover { background: rgba(255,255,255,0.2); }
+    .checkbox-option input { width: 20px; height: 20px; cursor: pointer; accent-color: #3b82f6; }
+    .checkbox-option span { color: white; font-size: 16px; cursor: pointer; }
+    
+    .input-area { margin-top: 20px; display: flex; flex-direction: column; gap: 15px; }
+    .answer-input { width: 100%; padding: 14px 20px; border-radius: 40px; border: 2px solid #3b82f6; background: rgba(0,0,0,0.6); color: white; font-size: 16px; outline: none; text-align: center; }
+    .answer-input:focus { border-color: #60a5fa; box-shadow: 0 0 10px rgba(59, 130, 246, 0.5); }
+    
+    .submit-btn { background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; border: none; padding: 14px 28px; border-radius: 40px; cursor: pointer; font-size: 18px; font-weight: bold; transition: transform 0.2s; width: 100%; }
+    .submit-btn:hover { transform: scale(1.02); background: linear-gradient(135deg, #2563eb, #1d4ed8); }
+    
+    .game-footer { margin-top: 30px; text-align: center; color: white; }
+    .progress-text { margin-bottom: 15px; }
+    .back-link { display: inline-block; background: rgba(255,255,255,0.2); padding: 8px 20px; border-radius: 40px; color: white; text-decoration: none; }
+</style>
+{% endblock %}
